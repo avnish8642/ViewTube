@@ -1,0 +1,13 @@
+{
+  "name": "viewtube-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-ready full-stack YouTube-inspired video streaming platform",
+  "scripts": {
+    "start": "node backend/server.js",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "build:frontend": "npm run build --prefix frontend"
+  }
+}
