@@ -39,6 +39,18 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Channel',
     },
+    themePreference: {
+      type: String,
+      enum: ['auto', 'light', 'dark'],
+      default: 'auto',
+    },
+    membership: {
+      plan: { type: String, enum: ['free', 'bronze', 'silver', 'gold'], default: 'free' },
+      status: { type: String, enum: ['active', 'cancelled', 'expired'], default: 'active' },
+      startedAt: { type: Date, default: Date.now },
+      expiresAt: { type: Date, default: null },
+      renew: { type: Boolean, default: false },
+    },
   },
   {
     timestamps: true,

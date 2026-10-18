@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ThumbsUp,
   ThumbsDown,
@@ -12,12 +12,13 @@ import {
   Calendar,
   AlertCircle,
   Copy,
+  Download,
 } from 'lucide-react';
 import VideoPlayer from '../components/video/VideoPlayer';
 import CommentSection from '../components/video/CommentSection';
 import RelatedVideos from '../components/video/RelatedVideos';
 import Modal from '../components/common/Modal';
-import { videoService, channelService, watchLaterService } from '../services/api';
+import { videoService, channelService, watchLaterService, membershipService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
@@ -30,6 +31,7 @@ import {
 
 const VideoPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { addToast } = useToast();
 
@@ -46,6 +48,15 @@ const VideoPage = () => {
   const [isWatchLater, setIsWatchLater] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [nextVideo, setNextVideo] = useState(null);
+
+  const handleRelatedVideos = useCallback((videos) => {
+    setNextVideo(videos[0] || null);
+  }, []);
+  const handleNextVideo = useCallback((nextId) => {
+    navigate(`/watch/${nextId}`);
+  }, [navigate]);
 
   // Fetch video details
   useEffect(() => {
@@ -172,6 +183,32 @@ const VideoPage = () => {
     setShowShareModal(false);
   };
 
+  const handleDownload = async () => {
+    if (!isAuthenticated) {
+      addToast('Sign in to use your membership download quota.', 'error');
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const key = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const response = await membershipService.requestDownload(id, key);
+      const file = await membershipService.downloadFile(response.data.download._id);
+      const url = URL.createObjectURL(file.data);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${video.title.replace(/[^\w.-]+/g, '_') || 'video'}.mp4`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      addToast('Download started. Quota usage is shown in Membership.', 'success');
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Download could not be authorized.', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 animate-pulse">
@@ -205,6 +242,14 @@ const VideoPage = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           {error || 'This video may have been removed or is currently private.'}
         </p>
+        {error?.toLowerCase().includes('premium') && (
+          <Link
+            to="/membership"
+            className="mb-3 inline-block rounded-xl border border-brand-500/30 px-5 py-2.5 text-sm font-semibold text-brand-600 transition hover:bg-brand-500/10 dark:text-brand-400"
+          >
+            View membership plans
+          </Link>
+        )}
         <Link
           to="/"
           className="inline-block px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition"
@@ -222,9 +267,13 @@ const VideoPage = () => {
         <div className="lg:col-span-2">
           {/* Video Player */}
           <VideoPlayer
+            key={id}
+            videoId={id}
             videoUrl={video.videoUrl}
             poster={video.thumbnailUrl}
             title={video.title}
+            nextVideo={nextVideo}
+            onNext={handleNextVideo}
           />
 
           {/* Title */}
@@ -320,6 +369,15 @@ const VideoPage = () => {
 
               {/* Share */}
               <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                title="Download using your plan quota"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#222222] border border-gray-200 dark:border-[#2d2d2d] hover:bg-gray-200 dark:hover:bg-[#2b2b2b] text-gray-700 dark:text-gray-200 transition disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">{isDownloading ? 'Downloading…' : 'Download'}</span>
+              </button>
+              <button
                 onClick={() => setShowShareModal(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#222222] border border-gray-200 dark:border-[#2d2d2d] hover:bg-gray-200 dark:hover:bg-[#2b2b2b] text-gray-700 dark:text-gray-200 transition"
               >
@@ -388,6 +446,7 @@ const VideoPage = () => {
           <RelatedVideos
             currentVideoId={video._id}
             category={video.category}
+            onVideosLoaded={handleRelatedVideos}
           />
         </div>
       </div>

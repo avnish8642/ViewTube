@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config';
+
 // Format view counts to YouTube style (e.g. 1.2K, 3.4M)
 export const formatViews = (views) => {
   if (!views && views !== 0) return '0 views';
@@ -83,6 +85,8 @@ export const resolveMediaUrl = (url) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  // Local upload served through Vite proxy or backend
+  if (url.startsWith('/uploads/') && API_BASE_URL.startsWith('http')) {
+    return `${new URL(API_BASE_URL).origin}${url}`;
+  }
   return url;
 };

@@ -38,6 +38,7 @@ const UploadPage = () => {
   const [category, setCategory] = useState('Tech');
   const [tagsInput, setTagsInput] = useState('');
   const [visibility, setVisibility] = useState('public');
+  const [premium, setPremium] = useState(false);
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -103,6 +104,7 @@ const UploadPage = () => {
       formData.append('description', description.trim());
       formData.append('category', category);
       formData.append('visibility', visibility);
+      formData.append('premium', String(premium));
       formData.append('tags', tagsInput);
 
       const res = await videoService.createVideo(formData, (progress) => {
@@ -229,6 +231,14 @@ const UploadPage = () => {
               </select>
             </div>
           </div>
+
+          <label className="flex items-start gap-3 rounded-2xl border border-violet-300 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/20">
+            <input type="checkbox" checked={premium} onChange={(event) => setPremium(event.target.checked)} className="mt-0.5 accent-brand-500" />
+            <span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-white">Premium video</span>
+              <span className="mt-1 block text-xs text-gray-600 dark:text-gray-400">Only viewers with an active paid plan can watch or download this video.</span>
+            </span>
+          </label>
 
           {/* Tags */}
           <div>

@@ -1,5 +1,6 @@
 import Reaction from '../models/Reaction.js';
 import Video from '../models/Video.js';
+import { redactPremiumVideoSource } from '../utils/videoSerialization.js';
 
 // @desc    Toggle like on a video
 // @route   POST /api/videos/:id/like
@@ -117,7 +118,8 @@ export const getMyLikedVideos = async (req, res, next) => {
 
     const videos = reactions
       .map((r) => r.video)
-      .filter((v) => v && v.visibility === 'public');
+      .filter((v) => v && v.visibility === 'public')
+      .map(redactPremiumVideoSource);
 
     res.status(200).json({
       success: true,

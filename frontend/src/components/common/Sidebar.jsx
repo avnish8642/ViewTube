@@ -15,6 +15,9 @@ import {
   Music,
   Gamepad2,
   Code,
+  Layers3,
+  WalletCards,
+  Video,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { channelService } from '../../services/api';
@@ -84,6 +87,10 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
               <Home className="w-5 h-5" />
               <span>Home</span>
             </NavLink>
+            <NavLink to="/suite" onClick={onCloseMobile} className={navClass}>
+              <Layers3 className="w-5 h-5 text-brand-500" />
+              <span>Suite</span>
+            </NavLink>
             <NavLink to="/search?q=trending" onClick={onCloseMobile} className={navClass}>
               <Flame className="w-5 h-5 text-orange-500" />
               <span>Trending</span>
@@ -91,6 +98,14 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
             <NavLink to="/subscriptions" onClick={onCloseMobile} className={navClass}>
               <Tv className="w-5 h-5" />
               <span>Subscriptions</span>
+            </NavLink>
+            <NavLink to="/membership" onClick={onCloseMobile} className={navClass}>
+              <WalletCards className="w-5 h-5 text-brand-500" />
+              <span>Membership</span>
+            </NavLink>
+            <NavLink to="/meetings" onClick={onCloseMobile} className={navClass}>
+              <Video className="w-5 h-5 text-red-500" />
+              <span>Live meetings</span>
             </NavLink>
           </div>
 
@@ -168,6 +183,10 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
           <Home className="w-5 h-5 mb-1" />
           <span>Home</span>
         </NavLink>
+        <NavLink to="/suite" className={compactNavClass}>
+          <Layers3 className="w-5 h-5 mb-1 text-brand-500" />
+          <span>Suite</span>
+        </NavLink>
         <NavLink to="/search?q=trending" className={compactNavClass}>
           <Flame className="w-5 h-5 mb-1 text-orange-500" />
           <span>Trending</span>
@@ -175,6 +194,14 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
         <NavLink to="/subscriptions" className={compactNavClass}>
           <Tv className="w-5 h-5 mb-1" />
           <span>Subscriptions</span>
+        </NavLink>
+        <NavLink to="/membership" className={compactNavClass}>
+          <WalletCards className="w-5 h-5 mb-1 text-brand-500" />
+          <span>Plans</span>
+        </NavLink>
+        <NavLink to="/meetings" className={compactNavClass}>
+          <Video className="w-5 h-5 mb-1 text-red-500" />
+          <span>Meet</span>
         </NavLink>
         <NavLink to="/history" className={compactNavClass}>
           <History className="w-5 h-5 mb-1" />
@@ -196,6 +223,10 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
           <Home className="w-5 h-5" />
           <span>Home</span>
         </NavLink>
+        <NavLink to="/suite" className={navClass}>
+          <Layers3 className="w-5 h-5 text-brand-500" />
+          <span>Suite</span>
+        </NavLink>
         <NavLink to="/search?q=trending" className={navClass}>
           <Flame className="w-5 h-5 text-orange-500" />
           <span>Trending</span>
@@ -203,6 +234,14 @@ const Sidebar = ({ isOpen, isMobile, onCloseMobile }) => {
         <NavLink to="/subscriptions" className={navClass}>
           <Tv className="w-5 h-5" />
           <span>Subscriptions</span>
+        </NavLink>
+        <NavLink to="/membership" className={navClass}>
+          <WalletCards className="w-5 h-5 text-brand-500" />
+          <span>Membership & Downloads</span>
+        </NavLink>
+        <NavLink to="/meetings" className={navClass}>
+          <Video className="w-5 h-5 text-red-500" />
+          <span>Live meetings</span>
         </NavLink>
       </div>
 

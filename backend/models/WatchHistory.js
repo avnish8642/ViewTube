@@ -16,6 +16,20 @@ const watchHistorySchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    progressSeconds: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    durationSeconds: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    completed: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

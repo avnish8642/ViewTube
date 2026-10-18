@@ -12,7 +12,7 @@ export const connectDB = async () => {
 
   try {
     // Attempt standard connection with 3s timeout
-    console.log(`[DB] Attempting connection to MongoDB at: ${uri}`);
+    console.log('[DB] Attempting connection to MongoDB...');
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 3000,
     });
@@ -22,12 +22,16 @@ export const connectDB = async () => {
     console.warn(`[DB] Primary connection failed: ${primaryError.message}`);
 
     // In development/test, fallback to in-memory MongoDB so the entire application runs seamlessly
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && process.env.RENDER !== 'true') {
       try {
         console.log('[DB] Starting in-memory MongoDB server fallback for local execution...');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         if (!mongodInstance) {
-          mongodInstance = await MongoMemoryServer.create();
+          mongodInstance = await MongoMemoryServer.create({
+            binary: {
+              version: process.env.MONGOMS_VERSION || '7.0.3',
+            },
+          });
         }
         const memUri = mongodInstance.getUri();
         console.log(`[DB] In-memory MongoDB started at: ${memUri}`);

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { LogIn, Sparkles, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, verifyLoginOtp, isAuthenticated, loading: authLoading } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,8 +14,16 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [challengeId, setChallengeId] = useState('');
+  const [otp, setOtp] = useState('');
+  const [developmentOtp, setDevelopmentOtp] = useState('');
+  const [rememberDevice, setRememberDevice] = useState(true);
 
   const redirectPath = location.state?.from?.pathname || '/';
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) navigate('/', { replace: true });
+  }, [authLoading, isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +36,17 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(identifier.trim(), password);
+      if (challengeId) {
+        await verifyLoginOtp(challengeId, otp, rememberDevice);
+      } else {
+        const response = await login(identifier.trim(), password);
+        if (response.otpRequired) {
+          setChallengeId(response.challengeId);
+          setDevelopmentOtp(response.developmentOtp || '');
+          setError(response.message || 'Enter the verification code sent to your email.');
+          return;
+        }
+      }
       addToast('Welcome back!', 'success');
       navigate(redirectPath, { replace: true });
     } catch (err) {
@@ -36,22 +54,6 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // 1-Click Quick Demo Login Helper
-  const handleQuickLogin = (demoIdentifier, demoPassword) => {
-    setIdentifier(demoIdentifier);
-    setPassword(demoPassword);
-    setLoading(true);
-    login(demoIdentifier, demoPassword)
-      .then(() => {
-        addToast('Logged in as demo user!', 'success');
-        navigate(redirectPath, { replace: true });
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || err.message);
-      })
-      .finally(() => setLoading(false));
   };
 
   return (
@@ -81,20 +83,24 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Email or Username
-            </label>
-            <input
-              type="text"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="aarav@viewtube.io or aarav_sharma"
-              required
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-[#333] bg-transparent text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-500"
-            />
+            {!challengeId && (
+              <>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Email or Username
+                </label>
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="aarav@viewtube.io or aarav_sharma"
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-[#333] bg-transparent text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-500"
+                />
+              </>
+            )}
           </div>
 
-          <div>
+          {!challengeId && <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Password
             </label>
@@ -106,7 +112,20 @@ const LoginPage = () => {
               required
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-[#333] bg-transparent text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-500"
             />
-          </div>
+          </div>}
+
+          {challengeId && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email verification code</label>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))} required className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-[#333] bg-transparent text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-500" />
+              <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                <input type="checkbox" checked={rememberDevice} onChange={(event) => setRememberDevice(event.target.checked)} />
+                Trust this device for 30 days (IP and browser must remain unchanged)
+              </label>
+              {developmentOtp && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Development OTP: <strong>{developmentOtp}</strong></p>}
+              <button type="button" onClick={() => { setChallengeId(''); setOtp(''); setDevelopmentOtp(''); setError(''); }} className="mt-2 text-xs text-brand-500 hover:underline">Back to sign in</button>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -114,35 +133,9 @@ const LoginPage = () => {
             className="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2"
           >
             <LogIn className="w-4 h-4" />
-            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
+            <span>{loading ? 'Verifying...' : challengeId ? 'Verify and Sign In' : 'Sign In'}</span>
           </button>
         </form>
-
-        {/* Quick Demo Logins for Pair Programming & Testing */}
-        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-[#252525]">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2.5 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-500" />
-            <span>Instant 1-Click Demo Logins:</span>
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('aarav@viewtube.io', 'password123')}
-              className="p-2 rounded-xl bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#2a2a2a] text-gray-800 dark:text-gray-200 font-medium transition text-left"
-            >
-              <div className="font-bold truncate">Aarav Sharma</div>
-              <div className="text-[10px] text-gray-500">Aarav Explains (Creator)</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('priya@viewtube.io', 'password123')}
-              className="p-2 rounded-xl bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#2a2a2a] text-gray-800 dark:text-gray-200 font-medium transition text-left"
-            >
-              <div className="font-bold truncate">Priya Nair</div>
-              <div className="text-[10px] text-gray-500">Priya Outside (Creator)</div>
-            </button>
-          </div>
-        </div>
 
         <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
           Don't have an account?{' '}

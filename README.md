@@ -8,8 +8,10 @@ A production-ready full-stack YouTube-inspired video streaming web application b
 
 ### 1. Modern YouTube-Style User Interface
 - **Responsive Layout**: Adapts cleanly across Mobile, Tablet, and Desktop.
+- **Automatic sign-in**: The application starts with an active session, so account features are immediately available without a sign-in prompt.
 - **Collapsible Sidebar**: Full expanded sidebar on desktop, compact icon mode on medium screens, and an overlay drawer on mobile.
 - **Dark & Light Mode**: Persistent theme switcher with custom dark theme aesthetics (`#0f0f0f`) and crisp light theme.
+- **Sign-in verification**: Unknown browser/device/IP contexts require an emailed OTP; optionally configured GeoIP lookups can also add city/state risk context.
 - **Category Filter Pills**: Interactive slider for filtering videos (`All`, `Coding`, `Tech`, `Music`, `Gaming`, `Travel`, `Education`, etc.).
 - **Skeleton Loaders & Empty States**: Polished shimmer placeholders for content loading and descriptive empty/error states.
 - **Toast Notifications**: Interactive animated feedback for actions (e.g. "Saved to Watch Later", "Comment posted", "Link copied").
@@ -19,7 +21,7 @@ A production-ready full-stack YouTube-inspired video streaming web application b
 - **Bcrypt Password Hashing**: Passwords salted and hashed with 10 rounds.
 - **Automatic Channel Creation**: Creating an account automatically configures a default channel for the user.
 - **User Profile Management**: Update avatar, username, bio, and change passwords with verification.
-- **1-Click Demo Accounts**: One-tap sign-in buttons on `/login` for instant testing without manual typing.
+- **Demo account**: A standard demo identity is available for trying the platform.
 
 ### 3. Video Playback & Custom HTML5 Video Player
 - Custom responsive HTML5 video player with:
@@ -27,8 +29,9 @@ A production-ready full-stack YouTube-inspired video streaming web application b
   - Custom timeline seek bar with elapsed and total duration tracking.
   - Skip forward (+10s) and backward (-10s).
   - Volume slider and one-click mute/unmute.
-  - Keyboard shortcuts (`Space` / `K` for play/pause, `M` for mute, `F` for fullscreen, `ArrowLeft` / `ArrowRight` for seek).
-  - Fullscreen mode.
+  - Keyboard shortcuts (`Space` / `K` for play/pause, `M` for mute, `F` for fullscreen, `T` for theater, `C` for captions, `P` for PiP, `N` for next video, and arrow keys for seek/volume).
+  - Fullscreen, theater mode, captions, Picture-in-Picture, and timeline frame previews.
+- Resumes saved playback position, records completion at 90%, and offers a cancellable 10-second next-video countdown.
 - **HTTP Range Video Streaming**: Backend supports `206 Partial Content` with `Accept-Ranges` and `Content-Range` for smooth video scrubbing.
 - **Automatic View Tracking**: Watching a video increments views and logs it into the user's Watch History.
 
@@ -56,6 +59,18 @@ A production-ready full-stack YouTube-inspired video streaming web application b
 - Real backend API search querying video title, description, tags, and channel names.
 - Matching channels showcase card with subscriber count.
 - Filter and sort by Views, Upload Date, and Rating.
+
+### 7. Unified Product Suite Derived From the Six Prior Projects
+- **Live meetings and private rooms** with secure access, moderation, and collaboration patterns from the video-calling app.
+- **Quota-aware media downloads** with subscription restrictions and premium access logic modeled after the download manager.
+- **Billing dashboard** with Razorpay/Stripe-ready plan flows for checkout and billing history.
+- **Advanced playback controls** and immersion from the custom player project.
+- **Security monitoring and OTP-trust flows** for login verification and adaptive account protection.
+- **Multilingual moderation and reporting** for community-safe discussion and review queues.
+- These capabilities are surfaced under the main `/suite` hub and the navigation shell inside VidSphere.
+- Live meetings use a six-person WebRTC mesh, HTTP-polled signaling, optional TURN, and local-only recording; this is not a 50-person SFU or independently verified end-to-end encryption.
+- Paid media access is streamed through a short-lived membership-checked proxy. Remote premium media must be HTTPS from a host listed in `VIDEO_MEDIA_HOSTS` (Cloudinary by default).
+- Billing currently implements Razorpay only; memberships are one-time purchases and do not automatically renew. Stripe checkout and email-based OTP require configured credentials.
 
 ---
 
@@ -169,12 +184,37 @@ NODE_ENV=development
 MONGODB_URI=mongodb://127.0.0.1:27017/viewtube
 JWT_SECRET=super_secret_viewtube_jwt_key_2026_xyz
 JWT_EXPIRE=7d
-CLIENT_URL=http://localhost:5173
+CLIENT_URL=https://viewtube-frontend-qfwz.onrender.com,http://localhost:5173
 
 # Optional: Cloudinary Storage (Leave blank for high-performance local disk storage with HTTP range streaming)
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
+
+# Sign-in OTP and trusted devices
+OTP_SECRET=
+TRUSTED_DEVICE_DAYS=30
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+# Paid memberships and community moderation
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+MODERATOR_KEY=
+BLOCKED_TERMS=
+TRANSLATE_API_URL=
+TRANSLATE_API_KEY=
+
+# Approved HTTPS source domains for remotely hosted media
+VIDEO_MEDIA_HOSTS=res.cloudinary.com
+
+# Optional trusted GeoIP endpoint returning city/state/country/latitude/longitude JSON.
+# The service receives the user's IP address when this is configured.
+GEOIP_LOOKUP_URL=
 ```
 
 ### Frontend Configuration (`frontend/.env`)
@@ -183,7 +223,20 @@ Create `frontend/.env` (a template is provided in `frontend/.env.example`):
 
 ```env
 VITE_API_URL=/api
+VITE_TURN_URL=
+VITE_TURN_USERNAME=
+VITE_TURN_CREDENTIAL=
 ```
+
+`GEOIP_LOOKUP_URL` may contain `{ip}` as a placeholder and should point to a GeoIP provider you trust. Without it, login history records browser/device/IP data but no geographic location. Email OTP and receipts require SMTP configuration. Razorpay test or live credentials are required to activate paid plans. Translation requires a LibreTranslate-compatible provider URL. TURN is strongly recommended for meetings behind restrictive NATs.
+
+For the deployed Render services, set the backend's `MONGODB_URI` to the Atlas
+connection string, `NODE_ENV=production`, `JWT_SECRET`, and `CLIENT_URL` to
+`https://viewtube-frontend-qfwz.onrender.com`. Set the frontend's `VITE_API_URL`
+to `https://viewtube-backend-mdvu.onrender.com/api`. A production frontend build also
+uses the Render backend URL if `VITE_API_URL` is unset or left as `/api`.
+The MongoDB connection string must be kept in the backend environment settings
+and must not be committed to the repository.
 
 ---
 
@@ -278,28 +331,3 @@ You can use the 1-click login buttons on `/login` or sign in manually with:
 
 ### Search (`/api/search`)
 - `GET /api/search?q=query&category=Tech&sort=views` — Search videos and channels
-
----
-
-## 🚢 Deployment Guide
-
-### Backend Deployment (Render / Railway)
-1. Push your repository to GitHub.
-2. In **Render** or **Railway**, create a new Web Service pointing to the `backend/` directory.
-3. Configure the start command: `node server.js`.
-4. Set Environment Variables:
-   - `NODE_ENV=production`
-   - `PORT=5000`
-   - `MONGODB_URI` (from MongoDB Atlas)
-   - `JWT_SECRET` (generate a strong random string)
-   - `CLIENT_URL` (your deployed frontend URL)
-   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-
-### Frontend Deployment (Vercel / Netlify)
-1. Create a new project in **Vercel** or **Netlify** pointing to the `frontend/` directory.
-2. Build Settings:
-   - Framework Preset: **Vite**
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-3. Environment Variables:
-   - `VITE_API_URL` (set to your deployed backend URL, e.g. `https://your-api.onrender.com/api`)

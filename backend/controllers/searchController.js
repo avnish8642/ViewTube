@@ -1,5 +1,6 @@
 import Video from '../models/Video.js';
 import Channel from '../models/Channel.js';
+import { redactPremiumVideoSource } from '../utils/videoSerialization.js';
 
 // @desc    Search videos and channels
 // @route   GET /api/search
@@ -75,7 +76,7 @@ export const search = async (req, res, next) => {
       page: Number(page),
       pages: Math.ceil(total / Number(limit)),
       matchingChannels,
-      videos,
+      videos: videos.map(redactPremiumVideoSource),
     });
   } catch (error) {
     next(error);

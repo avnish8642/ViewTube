@@ -7,6 +7,7 @@ import {
   updateVideo,
   deleteVideo,
   streamVideoFile,
+  streamVideoMedia,
 } from '../controllers/videoController.js';
 import {
   toggleLike,
@@ -24,12 +25,13 @@ const router = express.Router();
 
 // Specific routes first to avoid matching :id
 router.get('/liked/my', protect, getMyLikedVideos);
-router.get('/stream/:filename', streamVideoFile);
+router.get('/stream/:filename', optionalAuth, streamVideoFile);
+router.get('/media/:id', optionalAuth, streamVideoMedia);
 
 // General video routes
 router
   .route('/')
-  .get(getVideos)
+  .get(optionalAuth, getVideos)
   .post(
     protect,
     uploadMedia.fields([

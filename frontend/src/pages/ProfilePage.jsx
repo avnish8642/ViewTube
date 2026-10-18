@@ -35,6 +35,9 @@ const ProfilePage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [securityActivity, setSecurityActivity] = useState([]);
+  const [trustedDevices, setTrustedDevices] = useState([]);
+  const [themePreference, setThemePreference] = useState(user?.themePreference || 'auto');
 
   useEffect(() => {
     if (user?._id) {
@@ -50,6 +53,41 @@ const ProfilePage = () => {
         .finally(() => setLoadingVideos(false));
     }
   }, [user?._id]);
+
+  useEffect(() => {
+    if (activeTab !== 'security') return;
+    Promise.all([userService.getSecurityActivity(), userService.getTrustedDevices()])
+      .then(([activityResponse, devicesResponse]) => {
+        setSecurityActivity(activityResponse.data.events || []);
+        setTrustedDevices(devicesResponse.data.devices || []);
+      })
+      .catch((error) => addToast(error.response?.data?.message || 'Unable to load account security activity.', 'error'));
+  }, [activeTab, addToast]);
+
+  const handleThemePreferenceChange = async (preference) => {
+    setThemePreference(preference);
+    try {
+      const response = await userService.updateThemePreference(preference);
+      updateUser({ ...user, ...response.data.user });
+      window.dispatchEvent(new CustomEvent('vidsphere-theme', {
+        detail: { theme: response.data.user.effectiveTheme, preference },
+      }));
+      addToast('Theme preference saved.', 'success');
+    } catch (error) {
+      setThemePreference(user?.themePreference || 'auto');
+      addToast(error.response?.data?.message || 'Unable to save theme preference.', 'error');
+    }
+  };
+
+  const handleRevokeDevice = async (deviceId) => {
+    try {
+      await userService.revokeTrustedDevice(deviceId);
+      setTrustedDevices((previous) => previous.filter((device) => device._id !== deviceId));
+      addToast('Trusted device revoked. It will need email verification next time.', 'success');
+    } catch (error) {
+      addToast(error.response?.data?.message || 'Unable to revoke device.', 'error');
+    }
+  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -257,7 +295,8 @@ const ProfilePage = () => {
 
       {/* Password Change Form */}
       {activeTab === 'security' && (
-        <form onSubmit={handlePasswordSubmit} className="space-y-5 max-w-md animate-fade-in">
+        <div className="space-y-8 animate-fade-in">
+        <form onSubmit={handlePasswordSubmit} className="space-y-5 max-w-md">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
               Current Password
@@ -305,6 +344,49 @@ const ProfilePage = () => {
             {changingPassword ? 'Updating Password...' : 'Update Password'}
           </button>
         </form>
+
+        <section className="max-w-2xl rounded-2xl border border-gray-200 dark:border-[#282828] bg-white dark:bg-[#181818] p-5">
+          <h2 className="font-bold text-gray-900 dark:text-white">Theme preference</h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Auto uses light mode from 5:00 AM to noon IST and dark mode the rest of the day. A manual choice syncs to your account.</p>
+          <select value={themePreference} onChange={(event) => handleThemePreferenceChange(event.target.value)} className="mt-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#181818] px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+            <option value="auto">Automatic (IST)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </section>
+
+        <section className="max-w-3xl">
+          <h2 className="mb-3 font-bold text-gray-900 dark:text-white">Trusted devices</h2>
+          <div className="space-y-2">
+            {trustedDevices.length === 0 && <p className="text-sm text-gray-500">No active trusted devices.</p>}
+            {trustedDevices.map((device) => (
+              <div key={device._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-[#282828] bg-white dark:bg-[#181818] p-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{device.label}</p>
+                  <p className="text-xs text-gray-500">IP {device.ipAddress || 'unavailable'} · Last used {new Date(device.lastSeenAt).toLocaleString()} · Trusted until {new Date(device.trustedUntil).toLocaleDateString()}</p>
+                </div>
+                <button onClick={() => handleRevokeDevice(device._id)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">Revoke</button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-3xl">
+          <h2 className="mb-3 font-bold text-gray-900 dark:text-white">Recent sign-in activity</h2>
+          <div className="space-y-2">
+            {securityActivity.length === 0 && <p className="text-sm text-gray-500">No recorded sign-ins yet.</p>}
+            {securityActivity.map((event) => (
+              <div key={event._id} className="rounded-xl border border-gray-200 dark:border-[#282828] bg-white dark:bg-[#181818] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{event.browser} {event.browserVersion} · {event.operatingSystem} · {event.deviceType}{event.deviceModel ? ` (${event.deviceModel})` : ''}</p>
+                  <span className={`text-xs font-semibold ${event.success ? 'text-green-600' : 'text-amber-600'}`}>{event.success ? 'Verified' : event.reason.replaceAll('_', ' ')}</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">{event.ipAddress || 'IP unavailable'} · {[event.city, event.state, event.country].filter(Boolean).join(', ') || 'Location unavailable'} · {new Date(event.createdAt).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+        </div>
       )}
 
       {/* Manage Uploaded Videos */}

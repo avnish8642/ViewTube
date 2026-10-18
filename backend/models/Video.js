@@ -83,6 +83,10 @@ const videoSchema = new mongoose.Schema(
       enum: ['public', 'unlisted', 'private'],
       default: 'public',
     },
+    premium: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

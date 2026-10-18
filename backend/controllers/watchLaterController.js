@@ -1,5 +1,6 @@
 import WatchLater from '../models/WatchLater.js';
 import Video from '../models/Video.js';
+import { redactPremiumVideoSource } from '../utils/videoSerialization.js';
 
 // @desc    Get user's Watch Later list
 // @route   GET /api/watch-later
@@ -15,7 +16,8 @@ export const getWatchLater = async (req, res, next) => {
 
     const videos = list
       .map((item) => item.video)
-      .filter((v) => v && v.visibility === 'public');
+      .filter((v) => v && v.visibility === 'public')
+      .map(redactPremiumVideoSource);
 
     res.status(200).json({
       success: true,

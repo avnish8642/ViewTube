@@ -8,7 +8,6 @@ import {
   Sun,
   Moon,
   User,
-  LogOut,
   Settings,
   History,
   Clock,
@@ -16,16 +15,15 @@ import {
   Tv,
   Plus,
   X,
+  Layers3,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useToast } from '../../context/ToastContext';
 import { resolveMediaUrl } from '../../utils/formatters';
 
 const Navbar = ({ onToggleSidebar }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,13 +46,6 @@ const Navbar = ({ onToggleSidebar }) => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    setShowUserMenu(false);
-    addToast('Signed out successfully', 'info');
-    navigate('/');
   };
 
   const channelPath = user?.channel?._id ? `/channel/${user.channel._id}` : '/profile';
@@ -135,6 +126,21 @@ const Navbar = ({ onToggleSidebar }) => {
 
         {isAuthenticated ? (
           <>
+            <Link
+              to="/suite"
+              className="hidden sm:flex items-center gap-1.5 bg-brand-500/10 hover:bg-brand-500/15 text-brand-700 dark:text-brand-300 text-sm font-medium px-3.5 py-1.5 rounded-full transition"
+            >
+              <Layers3 className="w-4 h-4" />
+              <span>Suite</span>
+            </Link>
+            <Link
+              to="/meetings"
+              className="hidden lg:flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/15 text-red-700 dark:text-red-300 text-sm font-medium px-3 py-1.5 rounded-full transition"
+            >
+              <Video className="w-4 h-4" />
+              <span>Meet</span>
+            </Link>
+
             {/* Create Video Button */}
             <Link
               to="/upload"
@@ -228,28 +234,21 @@ const Navbar = ({ onToggleSidebar }) => {
                     </Link>
                   </div>
 
-                  <div className="border-t border-gray-100 dark:border-[#2d2d2d] pt-1">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
           </>
-        ) : (
-          <Link
-            to="/login"
-            className="flex items-center gap-2 border border-brand-500 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/10 px-3.5 py-1.5 rounded-full text-sm font-semibold transition"
-          >
-            <User className="w-4 h-4" />
-            <span>Sign in</span>
-          </Link>
-        )}
+        ) : !loading ? (
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="flex items-center gap-2 border border-brand-500 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/10 px-3.5 py-1.5 rounded-full text-sm font-semibold transition"
+            >
+              <User className="w-4 h-4" />
+              <span>Sign in</span>
+            </Link>
+          </div>
+        ) : null}
       </div>
     </nav>
   );

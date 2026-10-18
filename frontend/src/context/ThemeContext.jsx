@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { userService } from '../services/api';
 
 const ThemeContext = createContext(null);
 
@@ -21,8 +22,35 @@ export const ThemeProvider = ({ children }) => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    const preference = nextTheme;
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        localStorage.setItem('user', JSON.stringify({ ...user, themePreference: preference, effectiveTheme: nextTheme }));
+      } catch (error) {
+        console.error('Could not update the cached theme preference:', error);
+      }
+    }
+    window.dispatchEvent(new CustomEvent('vidsphere-theme', { detail: { theme: nextTheme, preference } }));
+    if (localStorage.getItem('token')) {
+      userService.updateThemePreference(preference).catch((error) => {
+        console.error('Could not save the theme preference to the account:', error.response?.data?.message || error.message);
+      });
+    }
   };
+
+  useEffect(() => {
+    const handleRemoteTheme = (event) => {
+      if (event.detail?.theme === 'light' || event.detail?.theme === 'dark') {
+        setTheme(event.detail.theme);
+      }
+    };
+    window.addEventListener('vidsphere-theme', handleRemoteTheme);
+    return () => window.removeEventListener('vidsphere-theme', handleRemoteTheme);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

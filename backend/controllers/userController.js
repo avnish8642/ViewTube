@@ -3,6 +3,10 @@ import Channel from '../models/Channel.js';
 import Video from '../models/Video.js';
 import bcrypt from 'bcryptjs';
 import { processUpload } from '../middleware/uploadMiddleware.js';
+import LoginEvent from '../models/LoginEvent.js';
+import TrustedDevice from '../models/TrustedDevice.js';
+import { serializeUser } from '../utils/security.js';
+import { redactPremiumVideoSource } from '../utils/videoSerialization.js';
 
 // @desc    Get user by ID
 // @route   GET /api/users/:id
@@ -145,8 +149,60 @@ export const getUserVideos = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: videos.length,
-      videos,
+      videos: videos.map(redactPremiumVideoSource),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateThemePreference = async (req, res, next) => {
+  try {
+    const { themePreference } = req.body;
+    if (!['auto', 'light', 'dark'].includes(themePreference)) {
+      return res.status(400).json({ success: false, message: 'Theme preference must be auto, light, or dark.' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { themePreference } },
+      { new: true, runValidators: true }
+    ).populate('channel');
+    res.status(200).json({ success: true, user: serializeUser(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSecurityActivity = async (req, res, next) => {
+  try {
+    const events = await LoginEvent.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('ipAddress browser browserVersion operatingSystem deviceType city state country latitude longitude success reason createdAt');
+    res.status(200).json({ success: true, events });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTrustedDevices = async (req, res, next) => {
+  try {
+    const devices = await TrustedDevice.find({ user: req.user._id, trustedUntil: { $gt: new Date() } })
+      .sort({ lastSeenAt: -1 })
+      .select('label ipAddress trustedUntil lastSeenAt createdAt');
+    res.status(200).json({ success: true, devices });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const revokeTrustedDevice = async (req, res, next) => {
+  try {
+    const result = await TrustedDevice.deleteOne({ _id: req.params.deviceId, user: req.user._id });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Trusted device not found.' });
+    }
+    res.status(200).json({ success: true, message: 'Trusted device revoked.' });
   } catch (error) {
     next(error);
   }

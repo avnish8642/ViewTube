@@ -3,6 +3,7 @@ import Channel from '../models/Channel.js';
 import Video from '../models/Video.js';
 import Subscription from '../models/Subscription.js';
 import { processUpload } from '../middleware/uploadMiddleware.js';
+import { redactPremiumVideoSource } from '../utils/videoSerialization.js';
 
 // @desc    Get channel by ID or handle
 // @route   GET /api/channels/:id
@@ -158,7 +159,7 @@ export const getChannelVideos = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: videos.length,
-      videos,
+      videos: videos.map(redactPremiumVideoSource),
     });
   } catch (error) {
     next(error);

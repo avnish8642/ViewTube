@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +38,9 @@ api.interceptors.response.use(
 
 // Auth Services
 export const authService = {
+  getDefaultAccountSession: () => api.post('/auth/default-account'),
   login: (credentials) => api.post('/auth/login', credentials),
+  verifyLoginOtp: (data) => api.post('/auth/verify-otp', data),
   register: (userData) => api.post('/auth/register', userData),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
@@ -52,6 +55,10 @@ export const userService = {
     }),
   changePassword: (data) => api.put('/users/password', data),
   getUserVideos: (id) => api.get(`/users/${id}/videos`),
+  updateThemePreference: (themePreference) => api.put('/users/preferences/theme', { themePreference }),
+  getSecurityActivity: () => api.get('/users/security/activity'),
+  getTrustedDevices: () => api.get('/users/security/devices'),
+  revokeTrustedDevice: (deviceId) => api.delete(`/users/security/devices/${deviceId}`),
 };
 
 // Video Services
@@ -97,6 +104,11 @@ export const commentService = {
   createComment: (videoId, data) => api.post(`/videos/${videoId}/comments`, data),
   updateComment: (id, data) => api.put(`/comments/${id}`, data),
   deleteComment: (id) => api.delete(`/comments/${id}`),
+  createCaptcha: () => api.post('/comments/captcha'),
+  vote: (id, type) => api.post(`/comments/${id}/vote`, { type }),
+  report: (id, data) => api.post(`/comments/${id}/reports`, data),
+  history: (id) => api.get(`/comments/${id}/history`),
+  translate: (data) => api.post('/comments/translate', data),
 };
 
 // Watch Later Services
@@ -110,6 +122,8 @@ export const watchLaterService = {
 // Watch History Services
 export const historyService = {
   getHistory: () => api.get('/history'),
+  getProgress: (videoId) => api.get(`/history/progress/${videoId}`),
+  saveProgress: (videoId, data) => api.put(`/history/progress/${videoId}`, data),
   removeFromHistory: (videoId) => api.delete(`/history/${videoId}`),
   clearHistory: () => api.delete('/history'),
 };
@@ -117,6 +131,40 @@ export const historyService = {
 // Search Services
 export const searchService = {
   search: (params) => api.get('/search', { params }),
+};
+
+export const featureSuiteService = {
+  getPlatformModules: () => api.get('/feature-suite'),
+};
+
+export const membershipService = {
+  getPlans: () => api.get('/membership/plans'),
+  getDashboard: () => api.get('/membership/current'),
+  createOrder: (data, idempotencyKey) => api.post('/membership/orders', data, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  verifyPayment: (data) => api.post('/membership/verify', data),
+  cancel: () => api.post('/membership/cancel'),
+  getDownloads: () => api.get('/downloads'),
+  requestDownload: (videoId, idempotencyKey) => api.post(`/downloads/${videoId}`, {}, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  downloadFile: (downloadId) => api.get(`/downloads/${downloadId}/file`, { responseType: 'blob' }),
+};
+
+export const meetingService = {
+  create: (data) => api.post('/meetings', data),
+  join: (roomId, password) => api.post(`/meetings/${roomId}/join`, { password }),
+  getRoom: (roomId) => api.get(`/meetings/${roomId}`),
+  updateRoom: (roomId, data) => api.patch(`/meetings/${roomId}`, data),
+  updateParticipant: (roomId, userId, data) => api.patch(`/meetings/${roomId}/participants/${userId}`, data),
+  updateStatus: (roomId, data) => api.patch(`/meetings/${roomId}/status`, data),
+  leave: (roomId) => api.post(`/meetings/${roomId}/leave`),
+  sendSignal: (roomId, data) => api.post(`/meetings/${roomId}/signals`, data),
+  pollSignals: (roomId, after) => api.get(`/meetings/${roomId}/signals`, { params: { after } }),
+  sendMessage: (roomId, data) => api.post(`/meetings/${roomId}/messages`, data),
+  uploadFile: (roomId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/meetings/${roomId}/attachments`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  downloadFile: (roomId, attachmentId) => api.get(`/meetings/${roomId}/attachments/${attachmentId}`, { responseType: 'blob' }),
 };
 
 export default api;

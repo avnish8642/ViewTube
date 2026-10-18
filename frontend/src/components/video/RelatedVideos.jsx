@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { videoService } from '../../services/api';
 import { formatViews, formatTimeAgo, resolveMediaUrl } from '../../utils/formatters';
 
-const RelatedVideos = ({ currentVideoId, category }) => {
+const RelatedVideos = ({ currentVideoId, category, onVideosLoaded }) => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -25,7 +25,9 @@ const RelatedVideos = ({ currentVideoId, category }) => {
       .then((res) => {
         if (isMounted && res.data?.videos) {
           // Exclude current video
-          setVideos(res.data.videos.filter((v) => v._id !== currentVideoId));
+          const related = res.data.videos.filter((v) => v._id !== currentVideoId);
+          setVideos(related);
+          onVideosLoaded?.(related);
         }
       })
       .catch((err) => {
@@ -38,7 +40,7 @@ const RelatedVideos = ({ currentVideoId, category }) => {
     return () => {
       isMounted = false;
     };
-  }, [currentVideoId, category, activeFilter]);
+  }, [currentVideoId, category, activeFilter, onVideosLoaded]);
 
   const categories = ['All', 'Related', 'Coding', 'Tech', 'Music', 'Gaming'];
 

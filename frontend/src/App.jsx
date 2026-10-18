@@ -16,6 +16,9 @@ import SubscriptionsPage from './pages/SubscriptionsPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import PlatformSuitePage from './pages/PlatformSuitePage';
+import MembershipPage from './pages/MembershipPage';
+import MeetingPage from './pages/MeetingPage';
 
 // Layout wrapper to control sidebar visibility on watch page
 const Layout = () => {
@@ -65,6 +68,7 @@ const Layout = () => {
             <Route path="/watch/:id" element={<VideoPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/channel/:id" element={<ChannelPage />} />
+            <Route path="/suite" element={<PlatformSuitePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
@@ -114,6 +118,30 @@ const Layout = () => {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/membership"
+              element={
+                <ProtectedRoute>
+                  <MembershipPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meetings"
+              element={
+                <ProtectedRoute>
+                  <MeetingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meeting/:roomId"
+              element={
+                <ProtectedRoute>
+                  <MeetingPage />
                 </ProtectedRoute>
               }
             />
